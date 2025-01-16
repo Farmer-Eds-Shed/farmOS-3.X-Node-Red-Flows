@@ -1,0 +1,774 @@
+[
+    {
+        "id": "9c8ff5887cb123db",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "name": "Fetch Data",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 180,
+        "y": 580,
+        "wires": [
+            [
+                "b7b090e8d76f4e54",
+                "4a548863e9adf9cc"
+            ]
+        ]
+    },
+    {
+        "id": "e400df6bdbf423ba",
+        "type": "group",
+        "z": "4ef2c00bde58b7b3",
+        "style": {
+            "stroke": "#999999",
+            "stroke-opacity": "1",
+            "fill": "none",
+            "fill-opacity": "1",
+            "label": true,
+            "label-position": "nw",
+            "color": "#a4a4a4"
+        },
+        "nodes": [
+            "4feb634b0d066d12",
+            "8ac427d859352780",
+            "3d50420474e04e45",
+            "1f41be34d247261d",
+            "16fd6012906adeba",
+            "b7b090e8d76f4e54",
+            "7cbc14d90ef5d3e8",
+            "7c108345760e1f76"
+        ],
+        "x": 294,
+        "y": 579,
+        "w": 892,
+        "h": 182
+    },
+    {
+        "id": "949541c9b70110d5",
+        "type": "subflow",
+        "name": "farmOS API",
+        "info": "",
+        "category": "farmOS",
+        "in": [
+            {
+                "x": 40,
+                "y": 160,
+                "wires": [
+                    {
+                        "id": "f5f2c948e607d3bb"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 900,
+                "y": 160,
+                "wires": [
+                    {
+                        "id": "c49aabb103815f36",
+                        "port": 0
+                    },
+                    {
+                        "id": "773b16e9273cd1ac",
+                        "port": 1
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "API",
+                "type": "str",
+                "value": ""
+            },
+            {
+                "name": "Method",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "GET"
+                                },
+                                "v": "GET"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "POST"
+                                },
+                                "v": "POST"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "PATCH"
+                                },
+                                "v": "PATCH"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "DELETE"
+                                },
+                                "v": "DELETE"
+                            }
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#C7E9C0"
+    },
+    {
+        "id": "524b513df6c48f0b",
+        "type": "function",
+        "z": "949541c9b70110d5",
+        "name": "API",
+        "func": "var token = global.get('token');\nvar api = env.get('API');\nvar method = env.get('Method')\n\nmsg.headers = {};\nmsg.headers['Authorization'] = \"Bearer \"+token;\nmsg.headers['Accept'] = \"application/vnd.api+json\";\nmsg.headers['content-type'] = 'application/vnd.api+json';\n\nmsg.url = global.get('farmOSurl').concat('/api/' + api);\n//msg.url = \"http://192.168.1.34/api/taxonomy_term/animal_type?page%5Boffset%5D=50&page%5Blimit%5D=50\";\nmsg.method = method;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 160,
+        "wires": [
+            [
+                "03cfe11edd83927d"
+            ]
+        ]
+    },
+    {
+        "id": "03cfe11edd83927d",
+        "type": "http request",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "senderr": false,
+        "x": 490,
+        "y": 160,
+        "wires": [
+            [
+                "773b16e9273cd1ac"
+            ]
+        ]
+    },
+    {
+        "id": "c49aabb103815f36",
+        "type": "function",
+        "z": "949541c9b70110d5",
+        "name": "Check for next",
+        "func": "var token = global.get('token');\nmsg.headers = {\n    Authorization: \"Bearer \"+token\n}\n\n\nif (msg.payload.links.hasOwnProperty(\"next\")){\n    msg.url = msg.payload.links.next.href;\n    msg.method = \"GET\";\n}else{\n    msg.url = null;\n    msg.complete = \"complete\";\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 100,
+        "wires": [
+            [
+                "4a41f840f045b6fc"
+            ]
+        ]
+    },
+    {
+        "id": "4a41f840f045b6fc",
+        "type": "switch",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "property": "url",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "nnull"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 490,
+        "y": 100,
+        "wires": [
+            [
+                "03cfe11edd83927d"
+            ]
+        ]
+    },
+    {
+        "id": "773b16e9273cd1ac",
+        "type": "switch",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "property": "method",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "GET",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 650,
+        "y": 160,
+        "wires": [
+            [
+                "c49aabb103815f36"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "0698c93190ab9fc4",
+        "type": "delay",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "2",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 180,
+        "y": 100,
+        "wires": [
+            [
+                "524b513df6c48f0b"
+            ]
+        ]
+    },
+    {
+        "id": "f5f2c948e607d3bb",
+        "type": "switch",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "property": "Method",
+        "propertyType": "env",
+        "rules": [
+            {
+                "t": "neq",
+                "v": "GET",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 150,
+        "y": 160,
+        "wires": [
+            [
+                "0698c93190ab9fc4"
+            ],
+            [
+                "524b513df6c48f0b"
+            ]
+        ]
+    },
+    {
+        "id": "cf0290052fc9e037",
+        "type": "subflow",
+        "name": "farmOS Oauth2V3",
+        "info": "",
+        "category": "farmOS V2",
+        "in": [
+            {
+                "x": 80,
+                "y": 260,
+                "wires": [
+                    {
+                        "id": "acfc46e21bdf62c6"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 1230,
+                "y": 260,
+                "wires": [
+                    {
+                        "id": "3d0bb775fbb6d738",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "grant",
+                "type": "str",
+                "value": "code",
+                "ui": {
+                    "icon": "font-awesome/fa-id-card-o",
+                    "label": {
+                        "en-US": "Grant Type"
+                    },
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "client credentials"
+                                },
+                                "v": "client"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "password"
+                                },
+                                "v": "password"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "scope",
+                "type": "str",
+                "value": "farm_worker",
+                "ui": {
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "Manager"
+                                },
+                                "v": "farm_manager"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "Viewer"
+                                },
+                                "v": "farm_viewer"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "Worker"
+                                },
+                                "v": "farm_worker"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "url",
+                "type": "str",
+                "value": ""
+            },
+            {
+                "name": "client",
+                "type": "cred"
+            },
+            {
+                "name": "secret",
+                "type": "cred"
+            },
+            {
+                "name": "username",
+                "type": "cred"
+            },
+            {
+                "name": "password",
+                "type": "cred"
+            }
+        ],
+        "meta": {},
+        "color": "#C7E9C0",
+        "outputLabels": [
+            "Debug"
+        ],
+        "icon": "node-red-contrib-oauth2/oauth2.svg"
+    },
+    {
+        "id": "9210259c7f2b215c",
+        "type": "http request",
+        "z": "cf0290052fc9e037",
+        "name": "",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 650,
+        "y": 260,
+        "wires": [
+            [
+                "4b6637a23189e0ac"
+            ]
+        ]
+    },
+    {
+        "id": "33606295cfc54171",
+        "type": "function",
+        "z": "cf0290052fc9e037",
+        "name": "client_credentials",
+        "func": "var farmOSurl = env.get('url');\nglobal.set('farmOSurl', farmOSurl);\n\nvar client = env.get('client');\nvar secret = env.get('secret');\nvar scope = env.get('scope');\n\nmsg.payload = {\n    \"grant_type\": \"client_credentials\",\n                \"client_id\": client,\n                \"client_secret\": secret,\n                \"scope\": scope\n}\n\nmsg.headers = {};\nmsg.headers['Accept'] = \"application/json\";\nmsg.headers['content-type'] = 'application/x-www-form-urlencoded';\n\nmsg.method = \"POST\";\nmsg.url = env.get('url') + \"/oauth/token\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 240,
+        "wires": [
+            [
+                "9210259c7f2b215c"
+            ]
+        ]
+    },
+    {
+        "id": "acfc46e21bdf62c6",
+        "type": "switch",
+        "z": "cf0290052fc9e037",
+        "name": "",
+        "property": "grant",
+        "propertyType": "env",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "client",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "password",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": true,
+        "outputs": 2,
+        "x": 210,
+        "y": 260,
+        "wires": [
+            [
+                "33606295cfc54171"
+            ],
+            [
+                "3c15790622ac845b"
+            ]
+        ]
+    },
+    {
+        "id": "3c15790622ac845b",
+        "type": "function",
+        "z": "cf0290052fc9e037",
+        "name": "password",
+        "func": "var farmOSurl = env.get('url');\nglobal.set('farmOSurl', farmOSurl);\n\nvar client = env.get('client');\nvar scope = env.get('scope');\nvar username = env.get('username');\nvar password = env.get('password');\n\nmsg.payload = {\n    \"grant_type\": \"password\",\n    \"username\": username,\n    \"password\": password,\n    \"client_id\": client,\n    \"scope\": scope\n}\n\nmsg.headers = {};\nmsg.headers['Accept'] = \"application/json\";\nmsg.headers['content-type'] = 'application/x-www-form-urlencoded';\n\nmsg.method = \"POST\";\nmsg.url = env.get('url') + \"/oauth/token\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 280,
+        "wires": [
+            [
+                "9210259c7f2b215c"
+            ]
+        ]
+    },
+    {
+        "id": "4b6637a23189e0ac",
+        "type": "function",
+        "z": "cf0290052fc9e037",
+        "name": "Process tokens",
+        "func": "var time;\nif (msg.payload.access_token) {\n    var token = msg.payload.access_token;\n    var refresh = msg.payload.refresh_token;\n    var expiry = Date.now() + (msg.payload.expires_in * 1000) - 120000;\n    global.set('farmos_token_expiry', expiry);\n    global.set('token', token);\n    global.set('farmos_refresh', refresh);\n    time = new Date();\n    msg.bearer = msg.payload;\n    msg.payload = \"Access Granted \" + time;\n} else {\n    msg.error = msg.payload;\n    msg.payload = msg.error.error;\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 260,
+        "wires": [
+            [
+                "3d0bb775fbb6d738"
+            ]
+        ]
+    },
+    {
+        "id": "3d0bb775fbb6d738",
+        "type": "change",
+        "z": "cf0290052fc9e037",
+        "name": "",
+        "rules": [
+            {
+                "t": "delete",
+                "p": "url",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "method",
+                "pt": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1060,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4feb634b0d066d12",
+        "type": "subflow:cf0290052fc9e037",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "",
+        "env": [
+            {
+                "name": "grant",
+                "value": "password",
+                "type": "str"
+            },
+            {
+                "name": "url",
+                "value": "http://127.0.0.1",
+                "type": "str"
+            },
+            {
+                "name": "client",
+                "type": "cred"
+            },
+            {
+                "name": "secret",
+                "type": "cred"
+            },
+            {
+                "name": "username",
+                "type": "cred"
+            },
+            {
+                "name": "password",
+                "type": "cred"
+            }
+        ],
+        "x": 590,
+        "y": 700,
+        "wires": [
+            [
+                "8ac427d859352780",
+                "3d50420474e04e45",
+                "7cbc14d90ef5d3e8"
+            ]
+        ]
+    },
+    {
+        "id": "8ac427d859352780",
+        "type": "debug",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "debug 25",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "3d50420474e04e45",
+        "type": "subflow:949541c9b70110d5",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Get Animal Terms",
+        "env": [
+            {
+                "name": "API",
+                "value": "taxonomy_term/animal_type?sort=name",
+                "type": "str"
+            },
+            {
+                "name": "Method",
+                "value": "GET",
+                "type": "str"
+            }
+        ],
+        "x": 850,
+        "y": 680,
+        "wires": [
+            [
+                "1f41be34d247261d"
+            ]
+        ]
+    },
+    {
+        "id": "1f41be34d247261d",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Store Animal terms",
+        "func": "let array = flow.get(\"animalTerms\") || [];\nlet name;\nlet id;\nlet description;\n\n\nmsg.payload.data.forEach(data => {\nname = data.attributes.name;\nid = data.id;\ndescription = data.attributes.description.value;\narray.push({id:id,name:name,description:description});\n})\n\nflow.set(\"animalTerms\", array);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 680,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "16fd6012906adeba",
+        "type": "comment",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "farmOS Auth",
+        "info": "",
+        "x": 390,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "b7b090e8d76f4e54",
+        "type": "change",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Clear Arrays",
+        "rules": [
+            {
+                "t": "delete",
+                "p": "animalTerms",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "assetTypes",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "inventory",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "land",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "logs",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "farmosHerd",
+                "pt": "flow"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 390,
+        "y": 700,
+        "wires": [
+            [
+                "4feb634b0d066d12"
+            ]
+        ]
+    },
+    {
+        "id": "7cbc14d90ef5d3e8",
+        "type": "subflow:949541c9b70110d5",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Get Animals",
+        "env": [
+            {
+                "name": "API",
+                "value": "asset/animal?sort=name",
+                "type": "str"
+            },
+            {
+                "name": "Method",
+                "value": "GET",
+                "type": "str"
+            }
+        ],
+        "x": 830,
+        "y": 720,
+        "wires": [
+            [
+                "7c108345760e1f76"
+            ]
+        ]
+    },
+    {
+        "id": "7c108345760e1f76",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Store animals",
+        "func": "let array = flow.get(\"farmosHerd\") || [];\nconst farmosHerd = msg.payload.data\n\n//array.push(farmosHerd);\narray = array.concat(farmosHerd)\n\nflow.set(\"farmosHerd\", array);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1040,
+        "y": 720,
+        "wires": [
+            []
+        ]
+    }
+]
