@@ -1,0 +1,1564 @@
+[
+    {
+        "id": "9c8ff5887cb123db",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "name": "Fetch Data",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 180,
+        "y": 580,
+        "wires": [
+            [
+                "b7b090e8d76f4e54",
+                "4a548863e9adf9cc"
+            ]
+        ]
+    },
+    {
+        "id": "50e912120222dd50",
+        "type": "comment",
+        "z": "4ef2c00bde58b7b3",
+        "name": "Fetch Data from Both API's and store in Flow context",
+        "info": "",
+        "x": 290,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "b4437a28ffd2af9f",
+        "type": "group",
+        "z": "4ef2c00bde58b7b3",
+        "style": {
+            "stroke": "#999999",
+            "stroke-opacity": "1",
+            "fill": "none",
+            "fill-opacity": "1",
+            "label": true,
+            "label-position": "nw",
+            "color": "#a4a4a4"
+        },
+        "nodes": [
+            "187ebad3ca493f7b",
+            "5f73f498e1a88f11",
+            "c0311d70a6f97c77",
+            "a9c11016127de289",
+            "5320c9318282ea09",
+            "bf6efeeec7b9e20a",
+            "e7e4f19f0ce41cff",
+            "2f5b2e6b6314b94a",
+            "b3bede87ee83f57a",
+            "641fa0ff50499d5b",
+            "d2f9dad2a32635c3",
+            "2956fe0b83fdda39",
+            "587b4e7e8f880ffa",
+            "8a627756567ff579"
+        ],
+        "x": 74,
+        "y": 799,
+        "w": 992,
+        "h": 342
+    },
+    {
+        "id": "1387b81f8c3249db",
+        "type": "subflow",
+        "name": "SubRequet",
+        "info": "## Input:\r\nMultiple requests can be grouped together and sent to the subrequests node as an array.  <br> <br>\r\n**action:** this indicates the type of action this subrequest will execute.\r\nCommon values for this property are `view`, `create`, `update`, `replace`,\r\n`delete`, `exists` and `discover`.<br> <br>\r\n**body:** the content of the body for the subrequest.<br> <br>\r\n**waitFor:** contains an array of request ID's from another request. Indicates that the\r\ncurrent subrequest depends on the other subrequest. When this property is\r\npresent, the that particular subrequest cannot be processed until the\r\nreferenced request has generated a response.\r\nAll requests are given an ID in order of being added to the array starting at `req-1` <br> <br>\r\n## Examples:\r\n```\r\n var quantity = {\r\n        \"action\": \"create\",\r\n        \"body\": {\r\n            \"data\": {\r\n                \"type\": \"quantity--test\",\r\n                \"id\": \"474c96b2-ccbd-41d2-adbb-631354b7faa1\",\r\n                \"attributes\": {\r\n                    \"label\": \"pH\"\r\n                    \"value\": {\r\n                        \"numerator\": 2,\r\n                        \"denominator\": 1,\r\n                        \"decimal\": 2\r\n                    },\r\n                }\r\n            }\r\n        }\r\n    }\r\n msg.req.push(quantity)\r\n ```\r\n```\r\nvar log = {\r\n        \"action\": \"create\",\r\n        \"waitFor\": [\"req-1\"],\r\n        \"body\":{\r\n            \"data\": {\r\n                \"type\": \"log--lab_test\",\r\n                \"attributes\": {\r\n                    \"name\": \"Soil Test\",\r\n                    \"status\": \"done\"\r\n                },\r\n                \"relationships\": {\r\n                    \"quantity\": {\r\n                        \"data\": [\r\n                            {\r\n                               \"type\": \"quantity--test\",\r\n                               \"id\": 474c96b2-ccbd-41d2-adbb-631354b7faa1\r\n                            }\r\n                        ]\r\n                    } \r\n                }\r\n            }\r\n        }\r\n    }\r\nmsg.req.push(log)\r\n```",
+        "category": "farmOS V2",
+        "in": [
+            {
+                "x": 60,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "569dbf148deda98e"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 680,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "e72198f66e1bd0a7",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {},
+        "color": "#C7E9C0",
+        "icon": "font-awesome/fa-leaf"
+    },
+    {
+        "id": "569dbf148deda98e",
+        "type": "function",
+        "z": "1387b81f8c3249db",
+        "name": "Subrequest",
+        "func": "// Retrieve the token from global context\nconst token = global.get(\"token\");\n\n// Retrieve the request array from the message\nlet req = msg.req;\n\n// Create the sub-requests using map\nmsg.payload = req.map((data, index) => {\n    // Determine the API type and create the URI\n    let apiType = data.body.data.type;\n    let uri = apiType.replace(/--/g, \"/\");\n\n    // Append the ID to the URI if the action is 'update'\n    if (data.action === \"update\") {\n        uri = uri + \"/\" + data.body.data.id;\n    }\n\n    // Create the sub-request object\n    let sub = {\n        \"requestId\": \"req-\" + (index + 1),\n        \"uri\": \"/api/\" + uri,\n        \"action\": data.action,\n        \"body\": JSON.stringify(data.body),\n        \"headers\": {\n            \"Accept\": \"application/vnd.api+json\",\n            \"Content-Type\": \"application/vnd.api+json\",\n            \"Authorization\": \"Bearer \" + token\n        }\n    };\n\n    // Add the waitFor property if it exists\n    if (data.waitFor !== undefined) {\n        sub.waitfor = data.waitFor;\n    }\n\n    return sub;\n});\n\n// Set the headers for the main request\nmsg.headers = {\n    'Authorization': \"Bearer \" + token,\n    'Accept': \"application/vnd.api+json\",\n    'Content-Type': 'application/vnd.api+json'\n};\n\n// Set the URL for the main request\nmsg.url = global.get('farmOSurl').concat('/subrequests?_format=json');\n\n// Set the HTTP method for the main request\nmsg.method = \"POST\";\n\n// Return the modified message object\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 190,
+        "y": 80,
+        "wires": [
+            [
+                "121fa1e5de2acb2a"
+            ]
+        ]
+    },
+    {
+        "id": "e72198f66e1bd0a7",
+        "type": "http request",
+        "z": "1387b81f8c3249db",
+        "name": "",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 550,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "121fa1e5de2acb2a",
+        "type": "delay",
+        "z": "1387b81f8c3249db",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 370,
+        "y": 80,
+        "wires": [
+            [
+                "e72198f66e1bd0a7"
+            ]
+        ]
+    },
+    {
+        "id": "187ebad3ca493f7b",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "Sync (add new animals)",
+        "props": [
+            {
+                "p": "action",
+                "v": "create",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 280,
+        "y": 900,
+        "wires": [
+            [
+                "bf6efeeec7b9e20a"
+            ]
+        ]
+    },
+    {
+        "id": "5f73f498e1a88f11",
+        "type": "debug",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "debug 27",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 960,
+        "y": 1000,
+        "wires": []
+    },
+    {
+        "id": "c0311d70a6f97c77",
+        "type": "subflow:1387b81f8c3249db",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "",
+        "x": 790,
+        "y": 1000,
+        "wires": [
+            [
+                "5f73f498e1a88f11"
+            ]
+        ]
+    },
+    {
+        "id": "a9c11016127de289",
+        "type": "comment",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "Herd Sync - Initalize herd only",
+        "info": "",
+        "x": 220,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "5320c9318282ea09",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "Sync (overwrite existing animals)",
+        "props": [
+            {
+                "p": "action",
+                "v": "update",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 250,
+        "y": 940,
+        "wires": [
+            [
+                "bf6efeeec7b9e20a"
+            ]
+        ]
+    },
+    {
+        "id": "bf6efeeec7b9e20a",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "Import animals to farmOS",
+        "func": "//This example includes Pagination\n// Declare Variables\nmsg.req = [];\nlet action = msg.action;\nlet active = \"active\";\nlet archived = \"archived\";\nconst terms = flow.get(\"animalTerms\");\nconst animalsInHerd = flow.get(\"animalsInHerd\");\nconst animalsSold = flow.get(\"animalsSold\");\nconst animalsDied = flow.get(\"animalsDied\");\nconst batchSize = 50; // Number of records per batch\n\n// Helper function to create asset object\nfunction createAssetObject(data, status) {\n    let tag = data.animal_id;\n    let brand = data.freeze_brand;\n    let gender = data.sex;\n    let dob = data.birth_date;\n    let breed = data.breed[0].code;\n\n    if (data.breed[0].percent != 100) {\n        breed = breed + \"X\";\n    }\n    \n    let animalICBF = JSON.stringify(data);\n\n    // Find breed UUID\n    let breedUUID = terms.find(term => term.name === breed)?.id;\n\n    if (breedUUID === undefined){\n        breedUUID = terms.find(term => term.name === \"Unknown\")?.id;\n    }\n\n    // Start Date formatting\n    function padZero(i) {\n        return i < 10 ? \"0\" + i : i;\n    }\n    let date = new Date(dob);\n    const newdob = date.getFullYear() + '-' + padZero(date.getMonth() + 1) + '-' + padZero(date.getDate());\n\n    // Create Asset Object\n    return {\n        \"action\": action,\n        \"body\": {\n            \"data\": {\n                \"type\": \"asset--animal\",\n                \"id\": \"00000000-0000-0000-0000-\" + tag.slice(-12), // Animal UUID generated from animal tag\n                \"attributes\": {\n                    \"name\": tag.slice(-5), // Name is last 5 digits of tag number\n                    \"status\": status, \n                    \"id_tag\": [{\n                        \"id\": tag,\n                        \"type\": \"ear_tag\",\n                        \"location\": \"\"\n                    },\n                    {\n                        \"id\": brand || tag.slice(-5),\n                        \"type\": \"brand\",\n                        \"location\": \"\"\n                    }],\n                    \"data\": animalICBF,\n                    \"birthdate\": newdob + \"T00:00:00+00:00\", // Formatted Date @ midnight\n                    \"sex\": gender.charAt(0), // Reduce Male/Female to M/F\n                },\n                \"relationships\": {\n                    \"animal_type\": {\n                        \"data\": {\n                            \"type\": \"taxonomy_term--animal_type\",\n                            \"id\": breedUUID,\n                        }\n                    }\n                }\n            }\n        }\n    };\n}\n\n// Process live animals (active status)\nif (animalsInHerd && Array.isArray(animalsInHerd)) {\n    msg.req = msg.req.concat(animalsInHerd.map(data => createAssetObject(data, active)));\n}\n\n// Process sold animals (archived status)\nif (animalsSold && Array.isArray(animalsSold)) {\n    msg.req = msg.req.concat(animalsSold.map(data => createAssetObject(data, archived)));\n}\n\n// Process dead animals (archived status)\nif (animalsDied && Array.isArray(animalsDied)) {\n    msg.req = msg.req.concat(animalsDied.map(data => createAssetObject(data, archived)));\n}\n\n// Function to handle pagination\nfunction paginate(array, size) {\n    let paginatedArray = [];\n    for (let i = 0; i < array.length; i += size) {\n        paginatedArray.push(array.slice(i, i + size));\n    }\n    return paginatedArray;\n}\n\n// Paginate the req array\nmsg.paginatedReq = paginate(msg.req, batchSize);\n\n\n// Send out each paginated batch\nmsg.paginatedReq.forEach(batch => {\n    node.send({ req: batch });\n});\n\n// Return null to indicate no more messages will be sent from this node\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 550,
+        "y": 920,
+        "wires": [
+            [
+                "c0311d70a6f97c77"
+            ]
+        ]
+    },
+    {
+        "id": "e7e4f19f0ce41cff",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "Create Birth logs",
+        "func": "// ToDo Request Pagination\nconst animalsBorn = flow.get('animalsBorn'); // Fetching animalsBorn from flow context\nconst farmosHerd = flow.get('farmosHerd'); // Fetching farmosHerd from flow context\n\nmsg.req = [];\n\nfunction formatDate(dateString) {\n    const date = new Date(dateString);\n    return date.toISOString().replace('.000Z', '+00:00');\n}\n\nanimalsBorn.forEach(animal => {\n    // Find the mother's UUID from the farmosHerd context\n    const mother = farmosHerd.find(h => h.attributes.id_tag[0].id === animal.dam_number);\n    const motherUUID = mother ? mother.id : null;\n\n    const logData = {\n        \"action\": 'create',\n        \"body\": {\n            \"data\": {\n            \"type\": 'log--birth',\n            \"id\": \"00000000-0000-0000-1111-\" + animal.animal_id.slice(-12),\n            \"attributes\": {\n                \"timestamp\": formatDate(animal.birth_date),\n                \"status\": 'done',\n                \"name\": `[Birth] ${animal.animal_id}`,\n                \"notes\": {\n                    \"value\": `Animal ID: ${animal.animal_id}, Sire: ${animal.sire_name}, Dam: ${animal.dam_number}`\n                }\n                // Add other attributes as needed\n            },\n            \"relationships\": {\n                \"asset\": {\n                    \"data\": [\n                        {\n                        \"type\": \"asset--animal\",\n                            \"id\": \"00000000-0000-0000-0000-\" + animal.animal_id.slice(-12),\n                        }\n                    ],\n          },\n                \"mother\": motherUUID ? {\n                    \"data\": {\n                        \"type\": \"asset--animal\",\n                        \"id\": motherUUID\n                    }\n                } : undefined\n                // Add relationships as needed\n            }\n        }\n        }\n    };\n    msg.req.push(logData);\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 960,
+        "wires": [
+            [
+                "c0311d70a6f97c77"
+            ]
+        ]
+    },
+    {
+        "id": "2f5b2e6b6314b94a",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 330,
+        "y": 980,
+        "wires": [
+            [
+                "e7e4f19f0ce41cff"
+            ]
+        ]
+    },
+    {
+        "id": "b3bede87ee83f57a",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "Create Purchase logs",
+        "func": "// ToDo Request Pagination\nconst animalsBought = flow.get('animalsBought'); // Fetching animalsBorn from flow context\nmsg.req = [];\n\nfunction formatDate(dateString) {\n    const date = new Date(dateString);\n    return date.toISOString().replace('.000Z', '+00:00');\n}\n\nanimalsBought.forEach(animal => {\n    const logData = {\n        \"action\": 'create',\n        \"body\": {\n            \"data\": {\n            \"type\": 'log--activity',\n            \"id\": \"00000000-0000-0000-1111-\" + animal.animal_id.slice(-12),\n            \"attributes\": {\n                \"timestamp\": formatDate(animal.arrive_date),\n                \"status\": 'done',\n                \"name\": `[Purchase] ${animal.animal_id}`,\n                \"notes\": {\n                    \"value\": `Animal ID: ${animal.animal_id}, Sire: ${animal.sire_name}, Dam: ${animal.dam_number}`\n                }\n                // Add other attributes as needed\n            },\n            \"relationships\": {\n                \"asset\": {\n                    \"data\": [\n                        {\n                        \"type\": \"asset--animal\",\n                            \"id\": \"00000000-0000-0000-0000-\" + animal.animal_id.slice(-12),\n                        }\n                    ],\n          }\n                // Add relationships as needed\n            }\n        }\n        }\n    };\n    msg.req.push(logData);\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 1000,
+        "wires": [
+            [
+                "c0311d70a6f97c77"
+            ]
+        ]
+    },
+    {
+        "id": "641fa0ff50499d5b",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 330,
+        "y": 1020,
+        "wires": [
+            [
+                "b3bede87ee83f57a"
+            ]
+        ]
+    },
+    {
+        "id": "d2f9dad2a32635c3",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "Create Sale logs",
+        "func": "// ToDo Request Pagination\nconst animalsSold = flow.get('animalsSold'); // Fetching animalsBorn from flow context\nmsg.req = [];\n\nfunction formatDate(dateString) {\n    const date = new Date(dateString);\n    return date.toISOString().replace('.000Z', '+00:00');\n}\n\nanimalsSold.forEach(animal => {\n    const logData = {\n        \"action\": 'create',\n        \"body\": {\n            \"data\": {\n            \"type\": 'log--harvest',\n            \"id\": \"00000000-0000-0000-9999-\" + animal.animal_id.slice(-12),\n            \"attributes\": {\n                \"timestamp\": formatDate(animal.depart_date),\n                \"status\": 'done',\n                \"name\": `[Sold] ${animal.animal_id}`,\n                \"notes\": {\n                    \"value\": `Animal ID: ${animal.animal_id}, Sire: ${animal.sire_name}, Dam: ${animal.dam_number}`\n                }\n                // Add other attributes as needed\n            },\n            \"relationships\": {\n                \"asset\": {\n                    \"data\": [\n                        {\n                        \"type\": \"asset--animal\",\n                            \"id\": \"00000000-0000-0000-0000-\" + animal.animal_id.slice(-12),\n                        }\n                    ],\n          }\n                // Add relationships as needed\n            }\n        }\n        }\n    };\n    msg.req.push(logData);\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 1040,
+        "wires": [
+            [
+                "c0311d70a6f97c77"
+            ]
+        ]
+    },
+    {
+        "id": "2956fe0b83fdda39",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 330,
+        "y": 1060,
+        "wires": [
+            [
+                "d2f9dad2a32635c3"
+            ]
+        ]
+    },
+    {
+        "id": "587b4e7e8f880ffa",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "Create Death logs",
+        "func": "// ToDo Request Pagination\nconst animalsDied = flow.get('animalsDied'); // Fetching animalsBorn from flow context\nmsg.req = [];\n\nfunction formatDate(dateString) {\n    const date = new Date(dateString);\n    return date.toISOString().replace('.000Z', '+00:00');\n}\n\nanimalsDied.forEach(animal => {\n    const logData = {\n        \"action\": 'create',\n        \"body\": {\n            \"data\": {\n            \"type\": 'log--harvest',\n            \"id\": \"00000000-0000-0000-9999-\" + animal.animal_id.slice(-12),\n            \"attributes\": {\n                \"timestamp\": formatDate(animal.depart_date),\n                \"status\": 'done',\n                \"name\": `[Dead] ${animal.animal_id}`,\n                \"notes\": {\n                    \"value\": `Animal ID: ${animal.animal_id}, Sire: ${animal.sire_name}, Dam: ${animal.dam_number}`\n                }\n                // Add other attributes as needed\n            },\n            \"relationships\": {\n                \"asset\": {\n                    \"data\": [\n                        {\n                        \"type\": \"asset--animal\",\n                            \"id\": \"00000000-0000-0000-0000-\" + animal.animal_id.slice(-12),\n                        }\n                    ],\n          }\n                // Add relationships as needed\n            }\n        }\n        }\n    };\n    msg.req.push(logData);\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 1080,
+        "wires": [
+            [
+                "c0311d70a6f97c77"
+            ]
+        ]
+    },
+    {
+        "id": "8a627756567ff579",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "g": "b4437a28ffd2af9f",
+        "name": "",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 330,
+        "y": 1100,
+        "wires": [
+            [
+                "587b4e7e8f880ffa"
+            ]
+        ]
+    },
+    {
+        "id": "ccb81a043164a80f",
+        "type": "group",
+        "z": "4ef2c00bde58b7b3",
+        "style": {
+            "stroke": "#999999",
+            "stroke-opacity": "1",
+            "fill": "none",
+            "fill-opacity": "1",
+            "label": true,
+            "label-position": "nw",
+            "color": "#a4a4a4"
+        },
+        "nodes": [
+            "ba196730395d6e55",
+            "1d3626589559453d",
+            "cf1cf6ea8cdd547d",
+            "b0c9d17bf2c38295",
+            "9ae182c8e8b5e9ee",
+            "69e749f4e7bcc42f",
+            "f60ffaa62379c86c",
+            "9d92d79870743c4e",
+            "e159d1c249190fd8"
+        ],
+        "x": 74,
+        "y": 59,
+        "w": 1052,
+        "h": 202
+    },
+    {
+        "id": "206496a20cb8cbbd",
+        "type": "subflow",
+        "name": "Read CSV File",
+        "info": "",
+        "category": "",
+        "in": [
+            {
+                "x": 60,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "1a96a56f081f1473"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 560,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "d703546acbbc37fb",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {},
+        "color": "#DDAA99"
+    },
+    {
+        "id": "1a96a56f081f1473",
+        "type": "file in",
+        "z": "206496a20cb8cbbd",
+        "name": "",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 200,
+        "y": 80,
+        "wires": [
+            [
+                "d703546acbbc37fb"
+            ]
+        ]
+    },
+    {
+        "id": "d703546acbbc37fb",
+        "type": "csv to json ext",
+        "z": "206496a20cb8cbbd",
+        "name": "",
+        "version": "0.1",
+        "source": "filename",
+        "delimiter": ",",
+        "quote": "\"",
+        "escape": "\"",
+        "ignoreEmpty": false,
+        "checkType": false,
+        "trim": false,
+        "noheader": false,
+        "includeColumns": "",
+        "headers": "",
+        "debug": false,
+        "x": 390,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ba196730395d6e55",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "d": true,
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "props": [
+            {
+                "p": "filename",
+                "v": "/home/eddie/farmOS/DAFM-Breeds.csv",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 170,
+        "y": 160,
+        "wires": [
+            [
+                "cf1cf6ea8cdd547d"
+            ]
+        ]
+    },
+    {
+        "id": "1d3626589559453d",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "farmOS Import X Breed Terms CSV",
+        "func": "//Create Cross Breed Taxanomy Terms\n//Declare Variables\nvar breed,code;\nvar asset\nmsg.req = [];\n\n//Start loop to Read CSV one line at a time\nmsg.payload.forEach(data => {\n\n//extract data from CSV\nbreed = data.Breed;\ncode = data.Code;\n\n\nconst logData = {\n        \"action\": 'create',\n        \"body\": {\n\t\t\t\"data\": {\n\t\t\t\t\"type\": \"taxonomy_term--animal_type\",\n\t\t\t\t\"attributes\": {\n\t\t\t\t\t\"status\": true,\n\t\t\t\t\t\"name\": code + \"X\",\n\t\t\t\t\t\"description\": {\n\t\t\t\t\t\t\"value\": breed + \" Cross\",\n\t\t\t\t\t\t\"format\": \"default\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n        }\n    };\nmsg.req.push(logData);\n\n});\n\nreturn msg\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 160,
+        "wires": [
+            [
+                "e159d1c249190fd8"
+            ]
+        ]
+    },
+    {
+        "id": "cf1cf6ea8cdd547d",
+        "type": "subflow:206496a20cb8cbbd",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "x": 340,
+        "y": 160,
+        "wires": [
+            [
+                "1d3626589559453d"
+            ]
+        ]
+    },
+    {
+        "id": "b0c9d17bf2c38295",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "d": true,
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "props": [
+            {
+                "p": "filename",
+                "v": "/home/eddie/farmOS/DAFM-Breeds.csv",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 170,
+        "y": 220,
+        "wires": [
+            [
+                "69e749f4e7bcc42f"
+            ]
+        ]
+    },
+    {
+        "id": "9ae182c8e8b5e9ee",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "farmOS Import Animal Terms CSV",
+        "func": "//Create Breed Taxanomy Terms\n//Declare Variables\nvar breed,code;\nvar asset\nmsg.req = [];\n\n//Start loop to Read CSV one line at a time\nmsg.payload.forEach(data => {\n\n//extract data from CSV\nbreed = data.Breed;\ncode = data.Code;\n\n\nconst logData = {\n        \"action\": 'create',\n        \"body\": {\n\t\t\t\"data\": {\n\t\t\t\t\"type\": \"taxonomy_term--animal_type\",\n\t\t\t\t\"attributes\": {\n\t\t\t\t\t\"status\": true,\n\t\t\t\t\t\"name\": code,\n\t\t\t\t\t\"description\": {\n\t\t\t\t\t\t\"value\": breed,\n\t\t\t\t\t\t\"format\": \"default\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n        }\n    };\nmsg.req.push(logData);\n\n});\n\nreturn msg\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 220,
+        "wires": [
+            [
+                "e159d1c249190fd8"
+            ]
+        ]
+    },
+    {
+        "id": "69e749f4e7bcc42f",
+        "type": "subflow:206496a20cb8cbbd",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "x": 340,
+        "y": 220,
+        "wires": [
+            [
+                "9ae182c8e8b5e9ee"
+            ]
+        ]
+    },
+    {
+        "id": "f60ffaa62379c86c",
+        "type": "debug",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "debug 29",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "9d92d79870743c4e",
+        "type": "comment",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "Initialize Animal Terms (Run First /Run Once Only)",
+        "info": "",
+        "x": 290,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "e159d1c249190fd8",
+        "type": "subflow:1387b81f8c3249db",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "x": 850,
+        "y": 180,
+        "wires": [
+            [
+                "f60ffaa62379c86c"
+            ]
+        ]
+    },
+    {
+        "id": "1502e205aa20e466",
+        "type": "group",
+        "z": "4ef2c00bde58b7b3",
+        "style": {
+            "stroke": "#999999",
+            "stroke-opacity": "1",
+            "fill": "none",
+            "fill-opacity": "1",
+            "label": true,
+            "label-position": "nw",
+            "color": "#a4a4a4"
+        },
+        "nodes": [
+            "284743b922ad3e33",
+            "99f656422dcdfa56",
+            "1a89403ac4af4641",
+            "f2e6cec3d46910ef"
+        ],
+        "x": 74,
+        "y": 1159,
+        "w": 652,
+        "h": 142
+    },
+    {
+        "id": "284743b922ad3e33",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "g": "1502e205aa20e466",
+        "name": "",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 190,
+        "y": 1260,
+        "wires": [
+            [
+                "99f656422dcdfa56"
+            ]
+        ]
+    },
+    {
+        "id": "99f656422dcdfa56",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "1502e205aa20e466",
+        "name": "Check for Herd Changes",
+        "func": "// Retrieve the herds from the flow context\nconst icbfHerd = flow.get(\"icbfHerd\");\nconst farmosHerd = flow.get(\"farmosHerd\");\n\n// Check if the herds are defined and not empty\nif (icbfHerd && Array.isArray(icbfHerd) && icbfHerd.length > 0 && farmosHerd && Array.isArray(farmosHerd) && farmosHerd.length > 0) {\n    // Create a map of farmOS herd by id for faster lookup\n    const farmosMap = new Map(farmosHerd.map(item => [item.attributes.id_tag[0].id, item]));\n\n    // Find animals that are in icbfHerd but not in farmosHerd\n    const not_in_farmos = icbfHerd.filter(item => !farmosMap.has(item.animal_id));\n\n    // Create a map of ICBF herd by id for faster lookup\n    const icbfMap = new Map(icbfHerd.map(item => [item.animal_id, item]));\n\n    // Find animals that are in farmosHerd but not in icbfHerd\n    const not_in_icbf = farmosHerd.filter(item => !icbfMap.has(item.attributes.id_tag[0].id));\n\n    // Store the results in the flow context\n    flow.set(\"not_in_farmos\", not_in_farmos);\n    flow.set(\"not_in_icbf\", not_in_icbf);\n} else {\n    // Handle the case where one or both herds are undefined or empty\n    flow.set(\"not_in_farmos\", []);\n    flow.set(\"not_in_icbf\", []);\n    msg.payload = \"One or both herds are undefined or empty.\";\n}\n\n// Return the original message\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 1260,
+        "wires": [
+            [
+                "1a89403ac4af4641"
+            ]
+        ]
+    },
+    {
+        "id": "1a89403ac4af4641",
+        "type": "debug",
+        "z": "4ef2c00bde58b7b3",
+        "g": "1502e205aa20e466",
+        "name": "debug 28",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 620,
+        "y": 1260,
+        "wires": []
+    },
+    {
+        "id": "f2e6cec3d46910ef",
+        "type": "comment",
+        "z": "4ef2c00bde58b7b3",
+        "g": "1502e205aa20e466",
+        "name": "Build Logic Here - For future updates",
+        "info": "",
+        "x": 240,
+        "y": 1200,
+        "wires": []
+    },
+    {
+        "id": "e400df6bdbf423ba",
+        "type": "group",
+        "z": "4ef2c00bde58b7b3",
+        "style": {
+            "stroke": "#999999",
+            "stroke-opacity": "1",
+            "fill": "none",
+            "fill-opacity": "1",
+            "label": true,
+            "label-position": "nw",
+            "color": "#a4a4a4"
+        },
+        "nodes": [
+            "4feb634b0d066d12",
+            "8ac427d859352780",
+            "3d50420474e04e45",
+            "1f41be34d247261d",
+            "16fd6012906adeba",
+            "b7b090e8d76f4e54",
+            "7cbc14d90ef5d3e8",
+            "7c108345760e1f76"
+        ],
+        "x": 294,
+        "y": 579,
+        "w": 892,
+        "h": 182
+    },
+    {
+        "id": "949541c9b70110d5",
+        "type": "subflow",
+        "name": "farmOS API",
+        "info": "",
+        "category": "farmOS",
+        "in": [
+            {
+                "x": 40,
+                "y": 160,
+                "wires": [
+                    {
+                        "id": "f5f2c948e607d3bb"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 900,
+                "y": 160,
+                "wires": [
+                    {
+                        "id": "c49aabb103815f36",
+                        "port": 0
+                    },
+                    {
+                        "id": "773b16e9273cd1ac",
+                        "port": 1
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "API",
+                "type": "str",
+                "value": ""
+            },
+            {
+                "name": "Method",
+                "type": "str",
+                "value": "",
+                "ui": {
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "GET"
+                                },
+                                "v": "GET"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "POST"
+                                },
+                                "v": "POST"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "PATCH"
+                                },
+                                "v": "PATCH"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "DELETE"
+                                },
+                                "v": "DELETE"
+                            }
+                        ]
+                    }
+                }
+            }
+        ],
+        "meta": {},
+        "color": "#C7E9C0"
+    },
+    {
+        "id": "524b513df6c48f0b",
+        "type": "function",
+        "z": "949541c9b70110d5",
+        "name": "API",
+        "func": "var token = global.get('token');\nvar api = env.get('API');\nvar method = env.get('Method')\n\nmsg.headers = {};\nmsg.headers['Authorization'] = \"Bearer \"+token;\nmsg.headers['Accept'] = \"application/vnd.api+json\";\nmsg.headers['content-type'] = 'application/vnd.api+json';\n\nmsg.url = global.get('farmOSurl').concat('/api/' + api);\n//msg.url = \"http://192.168.1.34/api/taxonomy_term/animal_type?page%5Boffset%5D=50&page%5Blimit%5D=50\";\nmsg.method = method;\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 160,
+        "wires": [
+            [
+                "03cfe11edd83927d"
+            ]
+        ]
+    },
+    {
+        "id": "03cfe11edd83927d",
+        "type": "http request",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "authType": "",
+        "senderr": false,
+        "x": 490,
+        "y": 160,
+        "wires": [
+            [
+                "773b16e9273cd1ac"
+            ]
+        ]
+    },
+    {
+        "id": "c49aabb103815f36",
+        "type": "function",
+        "z": "949541c9b70110d5",
+        "name": "Check for next",
+        "func": "var token = global.get('token');\nmsg.headers = {\n    Authorization: \"Bearer \"+token\n}\n\n\nif (msg.payload.links.hasOwnProperty(\"next\")){\n    msg.url = msg.payload.links.next.href;\n    msg.method = \"GET\";\n}else{\n    msg.url = null;\n    msg.complete = \"complete\";\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 100,
+        "wires": [
+            [
+                "4a41f840f045b6fc"
+            ]
+        ]
+    },
+    {
+        "id": "4a41f840f045b6fc",
+        "type": "switch",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "property": "url",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "nnull"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 490,
+        "y": 100,
+        "wires": [
+            [
+                "03cfe11edd83927d"
+            ]
+        ]
+    },
+    {
+        "id": "773b16e9273cd1ac",
+        "type": "switch",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "property": "method",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "GET",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 650,
+        "y": 160,
+        "wires": [
+            [
+                "c49aabb103815f36"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "0698c93190ab9fc4",
+        "type": "delay",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "2",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 180,
+        "y": 100,
+        "wires": [
+            [
+                "524b513df6c48f0b"
+            ]
+        ]
+    },
+    {
+        "id": "f5f2c948e607d3bb",
+        "type": "switch",
+        "z": "949541c9b70110d5",
+        "name": "",
+        "property": "Method",
+        "propertyType": "env",
+        "rules": [
+            {
+                "t": "neq",
+                "v": "GET",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 150,
+        "y": 160,
+        "wires": [
+            [
+                "0698c93190ab9fc4"
+            ],
+            [
+                "524b513df6c48f0b"
+            ]
+        ]
+    },
+    {
+        "id": "cf0290052fc9e037",
+        "type": "subflow",
+        "name": "farmOS Oauth2V3",
+        "info": "",
+        "category": "farmOS V2",
+        "in": [
+            {
+                "x": 80,
+                "y": 260,
+                "wires": [
+                    {
+                        "id": "acfc46e21bdf62c6"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 1230,
+                "y": 260,
+                "wires": [
+                    {
+                        "id": "3d0bb775fbb6d738",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [
+            {
+                "name": "grant",
+                "type": "str",
+                "value": "code",
+                "ui": {
+                    "icon": "font-awesome/fa-id-card-o",
+                    "label": {
+                        "en-US": "Grant Type"
+                    },
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "client credentials"
+                                },
+                                "v": "client"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "password"
+                                },
+                                "v": "password"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "scope",
+                "type": "str",
+                "value": "farm_worker",
+                "ui": {
+                    "type": "select",
+                    "opts": {
+                        "opts": [
+                            {
+                                "l": {
+                                    "en-US": "Manager"
+                                },
+                                "v": "farm_manager"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "Viewer"
+                                },
+                                "v": "farm_viewer"
+                            },
+                            {
+                                "l": {
+                                    "en-US": "Worker"
+                                },
+                                "v": "farm_worker"
+                            }
+                        ]
+                    }
+                }
+            },
+            {
+                "name": "url",
+                "type": "str",
+                "value": ""
+            },
+            {
+                "name": "client",
+                "type": "cred"
+            },
+            {
+                "name": "secret",
+                "type": "cred"
+            },
+            {
+                "name": "username",
+                "type": "cred"
+            },
+            {
+                "name": "password",
+                "type": "cred"
+            }
+        ],
+        "meta": {},
+        "color": "#C7E9C0",
+        "outputLabels": [
+            "Debug"
+        ],
+        "icon": "node-red-contrib-oauth2/oauth2.svg"
+    },
+    {
+        "id": "9210259c7f2b215c",
+        "type": "http request",
+        "z": "cf0290052fc9e037",
+        "name": "",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 650,
+        "y": 260,
+        "wires": [
+            [
+                "4b6637a23189e0ac"
+            ]
+        ]
+    },
+    {
+        "id": "33606295cfc54171",
+        "type": "function",
+        "z": "cf0290052fc9e037",
+        "name": "client_credentials",
+        "func": "var farmOSurl = env.get('url');\nglobal.set('farmOSurl', farmOSurl);\n\nvar client = env.get('client');\nvar secret = env.get('secret');\nvar scope = env.get('scope');\n\nmsg.payload = {\n    \"grant_type\": \"client_credentials\",\n                \"client_id\": client,\n                \"client_secret\": secret,\n                \"scope\": scope\n}\n\nmsg.headers = {};\nmsg.headers['Accept'] = \"application/json\";\nmsg.headers['content-type'] = 'application/x-www-form-urlencoded';\n\nmsg.method = \"POST\";\nmsg.url = env.get('url') + \"/oauth/token\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 240,
+        "wires": [
+            [
+                "9210259c7f2b215c"
+            ]
+        ]
+    },
+    {
+        "id": "acfc46e21bdf62c6",
+        "type": "switch",
+        "z": "cf0290052fc9e037",
+        "name": "",
+        "property": "grant",
+        "propertyType": "env",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "client",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "password",
+                "vt": "str"
+            }
+        ],
+        "checkall": "false",
+        "repair": true,
+        "outputs": 2,
+        "x": 210,
+        "y": 260,
+        "wires": [
+            [
+                "33606295cfc54171"
+            ],
+            [
+                "3c15790622ac845b"
+            ]
+        ]
+    },
+    {
+        "id": "3c15790622ac845b",
+        "type": "function",
+        "z": "cf0290052fc9e037",
+        "name": "password",
+        "func": "var farmOSurl = env.get('url');\nglobal.set('farmOSurl', farmOSurl);\n\nvar client = env.get('client');\nvar scope = env.get('scope');\nvar username = env.get('username');\nvar password = env.get('password');\n\nmsg.payload = {\n    \"grant_type\": \"password\",\n    \"username\": username,\n    \"password\": password,\n    \"client_id\": client,\n    \"scope\": scope\n}\n\nmsg.headers = {};\nmsg.headers['Accept'] = \"application/json\";\nmsg.headers['content-type'] = 'application/x-www-form-urlencoded';\n\nmsg.method = \"POST\";\nmsg.url = env.get('url') + \"/oauth/token\";\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 280,
+        "wires": [
+            [
+                "9210259c7f2b215c"
+            ]
+        ]
+    },
+    {
+        "id": "4b6637a23189e0ac",
+        "type": "function",
+        "z": "cf0290052fc9e037",
+        "name": "Process tokens",
+        "func": "var time;\nif (msg.payload.access_token) {\n    var token = msg.payload.access_token;\n    var refresh = msg.payload.refresh_token;\n    var expiry = Date.now() + (msg.payload.expires_in * 1000) - 120000;\n    global.set('farmos_token_expiry', expiry);\n    global.set('token', token);\n    global.set('farmos_refresh', refresh);\n    time = new Date();\n    msg.bearer = msg.payload;\n    msg.payload = \"Access Granted \" + time;\n} else {\n    msg.error = msg.payload;\n    msg.payload = msg.error.error;\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 260,
+        "wires": [
+            [
+                "3d0bb775fbb6d738"
+            ]
+        ]
+    },
+    {
+        "id": "3d0bb775fbb6d738",
+        "type": "change",
+        "z": "cf0290052fc9e037",
+        "name": "",
+        "rules": [
+            {
+                "t": "delete",
+                "p": "url",
+                "pt": "msg"
+            },
+            {
+                "t": "delete",
+                "p": "method",
+                "pt": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1060,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4feb634b0d066d12",
+        "type": "subflow:cf0290052fc9e037",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "",
+        "env": [
+            {
+                "name": "grant",
+                "value": "password",
+                "type": "str"
+            },
+            {
+                "name": "url",
+                "value": "http://127.0.0.1",
+                "type": "str"
+            },
+            {
+                "name": "client",
+                "type": "cred"
+            },
+            {
+                "name": "secret",
+                "type": "cred"
+            },
+            {
+                "name": "username",
+                "type": "cred"
+            },
+            {
+                "name": "password",
+                "type": "cred"
+            }
+        ],
+        "x": 590,
+        "y": 700,
+        "wires": [
+            [
+                "8ac427d859352780",
+                "3d50420474e04e45",
+                "7cbc14d90ef5d3e8"
+            ]
+        ]
+    },
+    {
+        "id": "8ac427d859352780",
+        "type": "debug",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "debug 25",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "3d50420474e04e45",
+        "type": "subflow:949541c9b70110d5",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Get Animal Terms",
+        "env": [
+            {
+                "name": "API",
+                "value": "taxonomy_term/animal_type?sort=name",
+                "type": "str"
+            },
+            {
+                "name": "Method",
+                "value": "GET",
+                "type": "str"
+            }
+        ],
+        "x": 850,
+        "y": 680,
+        "wires": [
+            [
+                "1f41be34d247261d"
+            ]
+        ]
+    },
+    {
+        "id": "1f41be34d247261d",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Store Animal terms",
+        "func": "let array = flow.get(\"animalTerms\") || [];\nlet name;\nlet id;\nlet description;\n\n\nmsg.payload.data.forEach(data => {\nname = data.attributes.name;\nid = data.id;\ndescription = data.attributes.description.value;\narray.push({id:id,name:name,description:description});\n})\n\nflow.set(\"animalTerms\", array);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 680,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "16fd6012906adeba",
+        "type": "comment",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "farmOS Auth",
+        "info": "",
+        "x": 390,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "b7b090e8d76f4e54",
+        "type": "change",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Clear Arrays",
+        "rules": [
+            {
+                "t": "delete",
+                "p": "animalTerms",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "assetTypes",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "inventory",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "land",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "logs",
+                "pt": "flow"
+            },
+            {
+                "t": "delete",
+                "p": "farmosHerd",
+                "pt": "flow"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 390,
+        "y": 700,
+        "wires": [
+            [
+                "4feb634b0d066d12"
+            ]
+        ]
+    },
+    {
+        "id": "7cbc14d90ef5d3e8",
+        "type": "subflow:949541c9b70110d5",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Get Animals",
+        "env": [
+            {
+                "name": "API",
+                "value": "asset/animal?sort=name",
+                "type": "str"
+            },
+            {
+                "name": "Method",
+                "value": "GET",
+                "type": "str"
+            }
+        ],
+        "x": 830,
+        "y": 720,
+        "wires": [
+            [
+                "7c108345760e1f76"
+            ]
+        ]
+    },
+    {
+        "id": "7c108345760e1f76",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "e400df6bdbf423ba",
+        "name": "Store animals",
+        "func": "let array = flow.get(\"farmosHerd\") || [];\nconst farmosHerd = msg.payload.data\n\n//array.push(farmosHerd);\narray = array.concat(farmosHerd)\n\nflow.set(\"farmosHerd\", array);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1040,
+        "y": 720,
+        "wires": [
+            []
+        ]
+    }
+]
