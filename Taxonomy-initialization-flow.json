@@ -1,0 +1,374 @@
+[
+    {
+        "id": "ccb81a043164a80f",
+        "type": "group",
+        "z": "4ef2c00bde58b7b3",
+        "style": {
+            "stroke": "#999999",
+            "stroke-opacity": "1",
+            "fill": "none",
+            "fill-opacity": "1",
+            "label": true,
+            "label-position": "nw",
+            "color": "#a4a4a4"
+        },
+        "nodes": [
+            "ba196730395d6e55",
+            "1d3626589559453d",
+            "cf1cf6ea8cdd547d",
+            "b0c9d17bf2c38295",
+            "9ae182c8e8b5e9ee",
+            "69e749f4e7bcc42f",
+            "f60ffaa62379c86c",
+            "9d92d79870743c4e",
+            "e159d1c249190fd8"
+        ],
+        "x": 74,
+        "y": 59,
+        "w": 1052,
+        "h": 202
+    },
+    {
+        "id": "1387b81f8c3249db",
+        "type": "subflow",
+        "name": "SubRequet",
+        "info": "## Input:\r\nMultiple requests can be grouped together and sent to the subrequests node as an array.  <br> <br>\r\n**action:** this indicates the type of action this subrequest will execute.\r\nCommon values for this property are `view`, `create`, `update`, `replace`,\r\n`delete`, `exists` and `discover`.<br> <br>\r\n**body:** the content of the body for the subrequest.<br> <br>\r\n**waitFor:** contains an array of request ID's from another request. Indicates that the\r\ncurrent subrequest depends on the other subrequest. When this property is\r\npresent, the that particular subrequest cannot be processed until the\r\nreferenced request has generated a response.\r\nAll requests are given an ID in order of being added to the array starting at `req-1` <br> <br>\r\n## Examples:\r\n```\r\n var quantity = {\r\n        \"action\": \"create\",\r\n        \"body\": {\r\n            \"data\": {\r\n                \"type\": \"quantity--test\",\r\n                \"id\": \"474c96b2-ccbd-41d2-adbb-631354b7faa1\",\r\n                \"attributes\": {\r\n                    \"label\": \"pH\"\r\n                    \"value\": {\r\n                        \"numerator\": 2,\r\n                        \"denominator\": 1,\r\n                        \"decimal\": 2\r\n                    },\r\n                }\r\n            }\r\n        }\r\n    }\r\n msg.req.push(quantity)\r\n ```\r\n```\r\nvar log = {\r\n        \"action\": \"create\",\r\n        \"waitFor\": [\"req-1\"],\r\n        \"body\":{\r\n            \"data\": {\r\n                \"type\": \"log--lab_test\",\r\n                \"attributes\": {\r\n                    \"name\": \"Soil Test\",\r\n                    \"status\": \"done\"\r\n                },\r\n                \"relationships\": {\r\n                    \"quantity\": {\r\n                        \"data\": [\r\n                            {\r\n                               \"type\": \"quantity--test\",\r\n                               \"id\": 474c96b2-ccbd-41d2-adbb-631354b7faa1\r\n                            }\r\n                        ]\r\n                    } \r\n                }\r\n            }\r\n        }\r\n    }\r\nmsg.req.push(log)\r\n```",
+        "category": "farmOS V2",
+        "in": [
+            {
+                "x": 60,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "569dbf148deda98e"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 680,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "e72198f66e1bd0a7",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {},
+        "color": "#C7E9C0",
+        "icon": "font-awesome/fa-leaf"
+    },
+    {
+        "id": "569dbf148deda98e",
+        "type": "function",
+        "z": "1387b81f8c3249db",
+        "name": "Subrequest",
+        "func": "// Retrieve the token from global context\nconst token = global.get(\"token\");\n\n// Retrieve the request array from the message\nlet req = msg.req;\n\n// Create the sub-requests using map\nmsg.payload = req.map((data, index) => {\n    // Determine the API type and create the URI\n    let apiType = data.body.data.type;\n    let uri = apiType.replace(/--/g, \"/\");\n\n    // Append the ID to the URI if the action is 'update'\n    if (data.action === \"update\") {\n        uri = uri + \"/\" + data.body.data.id;\n    }\n\n    // Create the sub-request object\n    let sub = {\n        \"requestId\": \"req-\" + (index + 1),\n        \"uri\": \"/api/\" + uri,\n        \"action\": data.action,\n        \"body\": JSON.stringify(data.body),\n        \"headers\": {\n            \"Accept\": \"application/vnd.api+json\",\n            \"Content-Type\": \"application/vnd.api+json\",\n            \"Authorization\": \"Bearer \" + token\n        }\n    };\n\n    // Add the waitFor property if it exists\n    if (data.waitFor !== undefined) {\n        sub.waitfor = data.waitFor;\n    }\n\n    return sub;\n});\n\n// Set the headers for the main request\nmsg.headers = {\n    'Authorization': \"Bearer \" + token,\n    'Accept': \"application/vnd.api+json\",\n    'Content-Type': 'application/vnd.api+json'\n};\n\n// Set the URL for the main request\nmsg.url = global.get('farmOSurl').concat('/subrequests?_format=json');\n\n// Set the HTTP method for the main request\nmsg.method = \"POST\";\n\n// Return the modified message object\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 190,
+        "y": 80,
+        "wires": [
+            [
+                "121fa1e5de2acb2a"
+            ]
+        ]
+    },
+    {
+        "id": "e72198f66e1bd0a7",
+        "type": "http request",
+        "z": "1387b81f8c3249db",
+        "name": "",
+        "method": "use",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "",
+        "insecureHTTPParser": false,
+        "authType": "",
+        "senderr": false,
+        "headers": [],
+        "x": 550,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "121fa1e5de2acb2a",
+        "type": "delay",
+        "z": "1387b81f8c3249db",
+        "name": "",
+        "pauseType": "rate",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 370,
+        "y": 80,
+        "wires": [
+            [
+                "e72198f66e1bd0a7"
+            ]
+        ]
+    },
+    {
+        "id": "206496a20cb8cbbd",
+        "type": "subflow",
+        "name": "Read CSV File",
+        "info": "",
+        "category": "",
+        "in": [
+            {
+                "x": 60,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "1a96a56f081f1473"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 560,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "d703546acbbc37fb",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {},
+        "color": "#DDAA99"
+    },
+    {
+        "id": "1a96a56f081f1473",
+        "type": "file in",
+        "z": "206496a20cb8cbbd",
+        "name": "",
+        "filename": "filename",
+        "filenameType": "msg",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 200,
+        "y": 80,
+        "wires": [
+            [
+                "d703546acbbc37fb"
+            ]
+        ]
+    },
+    {
+        "id": "d703546acbbc37fb",
+        "type": "csv to json ext",
+        "z": "206496a20cb8cbbd",
+        "name": "",
+        "version": "0.1",
+        "source": "filename",
+        "delimiter": ",",
+        "quote": "\"",
+        "escape": "\"",
+        "ignoreEmpty": false,
+        "checkType": false,
+        "trim": false,
+        "noheader": false,
+        "includeColumns": "",
+        "headers": "",
+        "debug": false,
+        "x": 390,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ba196730395d6e55",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "d": true,
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "props": [
+            {
+                "p": "filename",
+                "v": "/home/eddie/farmOS/DAFM-Breeds.csv",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 170,
+        "y": 160,
+        "wires": [
+            [
+                "cf1cf6ea8cdd547d"
+            ]
+        ]
+    },
+    {
+        "id": "1d3626589559453d",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "farmOS Import X Breed Terms CSV",
+        "func": "//Create Cross Breed Taxanomy Terms\n//Declare Variables\nvar breed,code;\nvar asset\nmsg.req = [];\n\n//Start loop to Read CSV one line at a time\nmsg.payload.forEach(data => {\n\n//extract data from CSV\nbreed = data.Breed;\ncode = data.Code;\n\n\nconst logData = {\n        \"action\": 'create',\n        \"body\": {\n\t\t\t\"data\": {\n\t\t\t\t\"type\": \"taxonomy_term--animal_type\",\n\t\t\t\t\"attributes\": {\n\t\t\t\t\t\"status\": true,\n\t\t\t\t\t\"name\": code + \"X\",\n\t\t\t\t\t\"description\": {\n\t\t\t\t\t\t\"value\": breed + \" Cross\",\n\t\t\t\t\t\t\"format\": \"default\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n        }\n    };\nmsg.req.push(logData);\n\n});\n\nreturn msg\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 160,
+        "wires": [
+            [
+                "e159d1c249190fd8"
+            ]
+        ]
+    },
+    {
+        "id": "cf1cf6ea8cdd547d",
+        "type": "subflow:206496a20cb8cbbd",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "x": 340,
+        "y": 160,
+        "wires": [
+            [
+                "1d3626589559453d"
+            ]
+        ]
+    },
+    {
+        "id": "b0c9d17bf2c38295",
+        "type": "inject",
+        "z": "4ef2c00bde58b7b3",
+        "d": true,
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "props": [
+            {
+                "p": "filename",
+                "v": "/home/eddie/farmOS/DAFM-Breeds.csv",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 170,
+        "y": 220,
+        "wires": [
+            [
+                "69e749f4e7bcc42f"
+            ]
+        ]
+    },
+    {
+        "id": "9ae182c8e8b5e9ee",
+        "type": "function",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "farmOS Import Animal Terms CSV",
+        "func": "//Create Breed Taxanomy Terms\n//Declare Variables\nvar breed,code;\nvar asset\nmsg.req = [];\n\n//Start loop to Read CSV one line at a time\nmsg.payload.forEach(data => {\n\n//extract data from CSV\nbreed = data.Breed;\ncode = data.Code;\n\n\nconst logData = {\n        \"action\": 'create',\n        \"body\": {\n\t\t\t\"data\": {\n\t\t\t\t\"type\": \"taxonomy_term--animal_type\",\n\t\t\t\t\"attributes\": {\n\t\t\t\t\t\"status\": true,\n\t\t\t\t\t\"name\": code,\n\t\t\t\t\t\"description\": {\n\t\t\t\t\t\t\"value\": breed,\n\t\t\t\t\t\t\"format\": \"default\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n        }\n    };\nmsg.req.push(logData);\n\n});\n\nreturn msg\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 220,
+        "wires": [
+            [
+                "e159d1c249190fd8"
+            ]
+        ]
+    },
+    {
+        "id": "69e749f4e7bcc42f",
+        "type": "subflow:206496a20cb8cbbd",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "x": 340,
+        "y": 220,
+        "wires": [
+            [
+                "9ae182c8e8b5e9ee"
+            ]
+        ]
+    },
+    {
+        "id": "f60ffaa62379c86c",
+        "type": "debug",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "debug 29",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1020,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "9d92d79870743c4e",
+        "type": "comment",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "Initialize Animal Terms (Run First /Run Once Only)",
+        "info": "",
+        "x": 290,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "e159d1c249190fd8",
+        "type": "subflow:1387b81f8c3249db",
+        "z": "4ef2c00bde58b7b3",
+        "g": "ccb81a043164a80f",
+        "name": "",
+        "x": 850,
+        "y": 180,
+        "wires": [
+            [
+                "f60ffaa62379c86c"
+            ]
+        ]
+    }
+]
